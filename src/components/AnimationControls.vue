@@ -1,0 +1,112 @@
+<template>
+  <div id="challenge-form">
+    <div id="animation-controls">
+      <button id="start-animation" disabled>Start Animation</button>
+      <label for="speed">
+        &nbsp;<span class="grey-color">speed:</span>&nbsp;
+        <input id="speed" type="range" min="10" max="999" step="10" value="60" disabled>
+      </label>
+    </div>
+    <div id="ship-info">
+      <label for="mmsiOrImo">
+        MMSI or IMO:
+        <input
+          type="number"
+          id="mmsiOrImo"
+          name="mmsiOrImo"
+          min="10"
+          max="100"
+          v-model="mmsiOrImo"
+        />
+      </label>
+      <label for="shipId">
+        ShipID:
+        <input
+          type="number"
+          id="shipId"
+          name="shipId"
+          v-model="shipId"
+        />
+      </label>
+      <label for="days">
+        Days:
+        <input
+          type="number"
+          id="days"
+          name="days"
+          min="1"
+          max="190"
+          v-model="days"
+        />
+      </label>
+      &nbsp;&nbsp;
+      <input
+        type="button"
+        value="Search"
+        :disabled="shipId == '' || mmsiOrImo == ''"
+        @click="fetchVesselTrack"
+      />
+    </div>
+    <div v-if="errorMessage">
+
+    </div>
+    <br>
+    <div>
+      <div>The request:</div>
+      {{ theRequest }}
+    </div>
+  </div>
+</template>
+
+<script>
+export default {
+  data() {
+    return {
+      mmsiOrImo: '',
+      shipId: '',
+      days: 1,
+      errorMessage: null
+    }
+  },
+  computed: {
+    theRequest() {
+      return `/exportvesseltrack/<apiKey>?v=3&days=${this.days}&shipid=${this.shipId}&mmsi=${this.mmsiOrImo}`;
+    }
+  },
+  methods: {
+    fetchVesselTrack() {
+      this.$http.get(
+        `https://services.marinetraffic.com/api${this.theRequest.replace('<apiKey>', '6ae24e8d813980080846d7d4858c00ce80e4cc13')}`
+      ).then((response) => {
+        console.log(response.data)
+      }).catch((error)=>{
+        console.log(error.response.data)
+      })
+    }
+  }
+}
+</script>
+
+<style scoped>
+.grey-color {
+  color: grey;
+}
+.black-color {
+  color: black;
+}
+#animation-controls {
+  padding: 20px;
+}
+#ship-info {
+  padding: 20px;
+}
+#challenge-form{
+  width: 60%;
+  height: 200px;
+  border: 2px black;
+  background-color: white;
+  position: absolute;
+  bottom: 20px;
+  left: 20%;
+}
+</style>

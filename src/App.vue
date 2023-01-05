@@ -1,14 +1,17 @@
 <template>
-  <MapContainer/>
+  <map-container/>
+  <animation-controls />
 </template>
 
 <script>
 import MapContainer from './components/MapContainer.vue'
+import AnimationControls from './components/AnimationControls.vue'
 
 export default {
   name: 'App',
   components: {
-    MapContainer
+    MapContainer,
+    AnimationControls
   }
 }
 </script>
