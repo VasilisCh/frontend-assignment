@@ -17,6 +17,7 @@
           min="10"
           max="100"
           v-model="mmsiOrImo"
+          @change="resetError"
         />
       </label>
       <label for="shipId">
@@ -26,6 +27,7 @@
           id="shipId"
           name="shipId"
           v-model="shipId"
+          @change="resetError"
         />
       </label>
       <label for="days">
@@ -37,6 +39,7 @@
           min="1"
           max="190"
           v-model="days"
+          @change="resetError"
         />
       </label>
       &nbsp;&nbsp;
@@ -46,11 +49,10 @@
         :disabled="shipId == '' || mmsiOrImo == ''"
         @click="fetchVesselTrack"
       />
+      <div v-if="errorMessage" class="error-text">
+        {{ errorMessage }}
+      </div>
     </div>
-    <div v-if="errorMessage">
-
-    </div>
-    <br>
     <div>
       <div>The request:</div>
       {{ theRequest }}
@@ -59,6 +61,8 @@
 </template>
 
 <script>
+var convert = require('xml-js');
+
 export default {
   data() {
     return {
@@ -78,16 +82,25 @@ export default {
       this.$http.get(
         `https://services.marinetraffic.com/api${this.theRequest.replace('<apiKey>', '6ae24e8d813980080846d7d4858c00ce80e4cc13')}`
       ).then((response) => {
+        this.resetError();
         console.log(response.data)
       }).catch((error)=>{
-        console.log(error.response.data)
+        const jsonError = convert.xml2js(error.response.data, {compact: true, spaces: 2});
+        this.errorMessage = jsonError.RESPONSE.STATUS.ERROR._attributes.DESCRIPTION;
       })
+    },
+    resetError() {
+      this.errorMessage = null;
     }
   }
 }
 </script>
 
 <style scoped>
+.error-text {
+  color: red;
+  font-size: 10pt;
+}
 .grey-color {
   color: grey;
 }
@@ -102,7 +115,7 @@ export default {
 }
 #challenge-form{
   width: 60%;
-  height: 200px;
+  height: 220px;
   border: 2px black;
   background-color: white;
   position: absolute;
