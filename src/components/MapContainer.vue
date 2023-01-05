@@ -41,7 +41,12 @@
           center: [0, 0],
           constrainResolution: true
         }),
-      })
+      });
+      // this.$http.get(
+      //   'https://services.marinetraffic.com/api/exportvesseltrack/6ae24e8d813980080846d7d4858c00ce80e4cc13?v=3&shipid=9241786&mmsi=239923000&days=1'
+      // ).then((response) => {
+      //   console.log(response.data)
+      // })
     },
   }
 </script>
