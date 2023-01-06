@@ -8,12 +8,15 @@
   import Map from 'ol/Map'
   import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer';
   import XYZ from 'ol/source/XYZ';
+  import Cluster from 'ol/source/Cluster';
   import 'ol/ol.css';
   import {
     Style,
     Circle,
+    Circle as CircleStyle,
     Fill,
-    Stroke
+    Stroke,
+    Text
   } from 'ol/style.js';
   import Feature from 'ol/Feature';
   import Point from 'ol/geom/Point';
@@ -105,9 +108,7 @@
       }
     },
     mounted() {
-      // this is where we create the OpenLayers map
       this.myMap = new Map({
-        // the map will be created using the 'map-root' ref
         target: this.$refs['map-root'],
         layers: [
           new TileLayer({
@@ -118,14 +119,65 @@
             }),
           })
         ],
-
-        // the map view will initially show the whole world
         view: new View({
           zoom: 0,
           center: [0, 0],
           constrainResolution: true
         }),
       });
+      this.$http.get(
+        `https://services.marinetraffic.com/api/exportvesseltrack/cf8f05df0b57bfae43e762cc61fd381239c4c042?v=1&msgtype=simple&protocol=json&MAXLAT=37.98&MINLON=23.60&MAXLON=23.70&days=1&MINLAT=37.90`
+      ).then((response) => {
+        const vesselLocations = response.data.map(function(l) {
+          return new Array(Number(l[3]), Number(l[4]));
+        });
+        const transformedLocations = new LineString(vesselLocations)
+          .transform('EPSG:4326', 'EPSG:3857');
+        const allRouteCoords = transformedLocations.getCoordinates();
+
+        const features = allRouteCoords.map(function(l) {
+          return new Feature({
+            geometry: new Point(l)
+          });
+        });
+        var vectorSource = new VectorSource({
+            features: features
+        });
+
+        const clusterSource = new Cluster({
+          distance: 40,
+          minDistance: 20,
+          source: vectorSource,
+        });
+
+        const clusters = new VectorLayer({
+          source: clusterSource,
+          style: function (feature) {
+            const size = feature.get('features').length;
+            let style = new Style({
+              image: new CircleStyle({
+                radius: 10,
+                stroke: new Stroke({
+                  color: '#fff',
+                }),
+                fill: new Fill({
+                  color: '#3399CC',
+                }),
+              }),
+              text: new Text({
+                text: size.toString(),
+                fill: new Fill({
+                  color: '#fff',
+                }),
+              }),
+            });
+            return style;
+          },
+        });
+        this.myMap.addLayer(clusters);
+      }).catch((error)=>{
+        console.error(error);
+      })
     },
     methods: {
       stopAnimation() {
