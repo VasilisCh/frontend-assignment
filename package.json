@@ -13,6 +13,7 @@
     "ol": "^7.2.2",
     "vue": "^3.0.0",
     "vue-axios": "^3.5.2",
+    "vuex": "^4.0.2",
     "xml-js": "^1.6.11"
   },
   "devDependencies": {

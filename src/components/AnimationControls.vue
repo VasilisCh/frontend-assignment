@@ -1,10 +1,12 @@
 <template>
   <div id="challenge-form">
     <div id="animation-controls">
-      <button id="start-animation" disabled>Start Animation</button>
+      <button id="start-animation" :disabled="!trackFetched" @click="toggleAnimation">
+        {{ animationToggled ? 'Stop' : 'Start' }} animation
+      </button>
       <label for="speed">
-        &nbsp;<span class="grey-color">speed:</span>&nbsp;
-        <input id="speed" type="range" min="10" max="999" step="10" value="60" disabled>
+        &nbsp;<span :class="!trackFetched ? 'grey-color' : 'black-color'">speed:</span>&nbsp;
+        <input id="speed" type="range" min="2" max="100" step="2" v-model="speedValue" :disabled="!trackFetched">
       </label>
     </div>
     <div id="ship-info">
@@ -66,24 +68,38 @@ var convert = require('xml-js');
 export default {
   data() {
     return {
-      mmsiOrImo: '',
-      shipId: '',
+      mmsiOrImo: '239923000',
+      shipId: '9241786',
       days: 1,
-      errorMessage: null
+      errorMessage: null,
+      trackFetched: false,
+      speedValue: 10,
+      animationToggled: false
     }
   },
   computed: {
     theRequest() {
-      return `/exportvesseltrack/<apiKey>?v=3&days=${this.days}&shipid=${this.shipId}&mmsi=${this.mmsiOrImo}`;
+      return `/exportvesseltrack/<apiKey>?v=3&protocol=json&days=${this.days}&shipid=${this.shipId}&mmsi=${this.mmsiOrImo}`;
+    }
+  },
+  watch: {
+    speedValue: function(newVal) {
+      this.$emit('speedValueChanged', newVal);
     }
   },
   methods: {
+    toggleAnimation() {
+      this.animationToggled = !this.animationToggled;
+      this.$emit('toggleAnimation');
+    },
     fetchVesselTrack() {
       this.$http.get(
-        `https://services.marinetraffic.com/api${this.theRequest.replace('<apiKey>', '6ae24e8d813980080846d7d4858c00ce80e4cc13')}`
+        `https://services.marinetraffic.com/api${this.theRequest.replace('<apiKey>', 'cf8f05df0b57bfae43e762cc61fd381239c4c042')}`
       ).then((response) => {
         this.resetError();
-        console.log(response.data)
+        this.$store.commit('setTrack', { track: response.data });
+        this.$emit('trackFetched');
+        this.trackFetched = true;
       }).catch((error)=>{
         const jsonError = convert.xml2js(error.response.data, {compact: true, spaces: 2});
         this.errorMessage = jsonError.RESPONSE.STATUS.ERROR._attributes.DESCRIPTION;

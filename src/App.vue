@@ -1,19 +1,39 @@
 <template>
-  <map-container/>
-  <animation-controls />
+  <map-container
+    :track="fetchedTrack"
+    :toggleAnimation="animationToggled"
+    :animationSpeed="speed"
+  />
+  <animation-controls
+    @trackFetched="fetchedTrack = $store.state.track"
+    @speedValueChanged="setSpeed"
+    @toggleAnimation="animationToggled = !animationToggled"
+  />
 </template>
 
 <script>
-import MapContainer from './components/MapContainer.vue'
-import AnimationControls from './components/AnimationControls.vue'
+import MapContainer from "./components/MapContainer.vue";
+import AnimationControls from "./components/AnimationControls.vue";
 
 export default {
-  name: 'App',
+  name: "App",
   components: {
     MapContainer,
-    AnimationControls
+    AnimationControls,
+  },
+  data() {
+    return {
+      fetchedTrack: null,
+      speed: 0,
+      animationToggled: false
+    }
+  },
+  methods: {
+    setSpeed(newValue) {
+      this.speed = Number(newValue);
+    }
   }
-}
+};
 </script>
 
 <style>
