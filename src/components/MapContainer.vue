@@ -26,7 +26,7 @@
     '<a href="https://www.maptiler.com/copyright/" target="_blank">&copy; MapTiler</a> ' +
     '<a href="https://www.openstreetmap.org/copyright" target="_blank">&copy; OpenStreetMap contributors</a>';
 
-  var lastTime, distance = 0, routeCoords, route, position;
+  var lastTime, distance = 0, routeCoords, route, position, vectorLayer, geoMarker;
 
   var styles = {
   'geoMarker': new Style({
@@ -65,21 +65,13 @@
         required: false
       }
     },
-    watch: { 
-      track: function(newVal, oldVal) {
-        const locations = [
-          [53.1, 6.9],
-          [53.2, 6.8],
-          [53.3, 6.7],
-          [53.4, 6.6],
-          [53.5, 6.5],
-          [53.6, 6.4],
-          [53.7, 6.3],
-          [53.8, 6.2],
-          [53.9, 6.1],];
-        locations.map(function(l) {
-          return l.reverse();
-        });
+    watch: {
+      toggleAnimation(newValue) {
+        if(newValue) this.startAnimation();
+        else this.stopAnimation();
+      },
+      track: function(newVal) {
+        const locations = newVal;
         route = new LineString(locations)
           .transform('EPSG:4326', 'EPSG:3857');
 
@@ -90,7 +82,7 @@
           type: 'route',
           geometry: route
         });
-        var geoMarker = new Feature({
+        geoMarker = new Feature({
           type: 'geoMarker',
           geometry: new Point(routeCoords[0])
         });
@@ -106,15 +98,10 @@
         var vectorSource = new VectorSource({
             features: [routeFeature, geoMarker, startMarker, endMarker]
         });
-        const vectorLayer = new VectorLayer({
+        vectorLayer = new VectorLayer({
           source: vectorSource,
         });
-        console.log('Prop changed: ', newVal, ' | was: ', oldVal);
         this.myMap.addLayer(vectorLayer);
-        lastTime = Date.now();
-        vectorLayer.on('postrender', this.moveFeature);
-        // hide geoMarker and trigger map render through change event
-        geoMarker.setGeometry(null);
       }
     },
     mounted() {
@@ -141,6 +128,15 @@
       });
     },
     methods: {
+      stopAnimation() {
+        geoMarker.setGeometry(position);
+        vectorLayer.un('postrender', this.moveFeature);
+      },
+      startAnimation() {
+        lastTime = Date.now();
+        vectorLayer.on('postrender', this.moveFeature);
+        geoMarker.setGeometry(null);
+      },
       moveFeature: function(event) {
         const speed = this.animationSpeed;
         const time = event.frameState.time;

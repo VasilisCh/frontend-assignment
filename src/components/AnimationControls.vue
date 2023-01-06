@@ -6,7 +6,7 @@
       </button>
       <label for="speed">
         &nbsp;<span :class="!trackFetched ? 'grey-color' : 'black-color'">speed:</span>&nbsp;
-        <input id="speed" type="range" min="2" max="100" step="2" v-model="speedValue" :disabled="!trackFetched">
+        <input id="speed" type="range" min="2" max="1000" step="2" v-model="speedValue" :disabled="!trackFetched">
       </label>
     </div>
     <div id="ship-info">
@@ -97,7 +97,11 @@ export default {
         `https://services.marinetraffic.com/api${this.theRequest.replace('<apiKey>', 'cf8f05df0b57bfae43e762cc61fd381239c4c042')}`
       ).then((response) => {
         this.resetError();
-        this.$store.commit('setTrack', { track: response.data });
+        this.$store.commit('setTrack', {
+          track: response.data.map(function(l) {
+            return new Array(l[4], l[5]);
+          })
+        });
         this.$emit('trackFetched');
         this.trackFetched = true;
       }).catch((error)=>{
