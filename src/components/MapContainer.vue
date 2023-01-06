@@ -177,7 +177,13 @@
         this.myMap.addLayer(clusters);
       }).catch((error)=>{
         console.error(error);
-      })
+      });
+      // change mouse cursor when over marker
+      this.myMap.on('pointermove', (e) => {
+        const pixel = this.myMap.getEventPixel(e.originalEvent);
+        const hit = this.myMap.hasFeatureAtPixel(pixel);
+        this.myMap.getTarget().style.cursor = hit ? 'pointer' : '';
+      });
     },
     methods: {
       stopAnimation() {
