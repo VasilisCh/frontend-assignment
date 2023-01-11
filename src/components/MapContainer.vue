@@ -1,5 +1,9 @@
 <template>
-  <div ref="map-root" style="height: 98vh;">
+  <div
+    ref="map-root"
+    style="height: 98vh;"
+  >
+    <div id="popup"></div>
   </div>
 </template>
 
@@ -23,6 +27,7 @@
   import VectorSource from 'ol/source/Vector';
   import { LineString } from 'ol/geom';
   import {getVectorContext} from 'ol/render.js';
+  import {boundingExtent} from 'ol/extent.js';
 
   const key = '4q1O73skryrt6BnvYvzR';
   const attributions =
@@ -175,10 +180,22 @@
           },
         });
         this.myMap.addLayer(clusters);
+        this.myMap.on('click', (e) => {
+          clusters.getFeatures(e.pixel).then((clickedFeatures) => {
+            if (clickedFeatures.length) {
+              const features = clickedFeatures[0].get('features');
+              if (features.length > 1) {
+                const extent = boundingExtent(
+                  features.map((r) => r.getGeometry().getCoordinates())
+                );
+                this.myMap.getView().fit(extent, {duration: 1000, padding: [50, 50, 50, 50]});
+              }
+            }
+          });
+        });
       }).catch((error)=>{
         console.error(error);
       });
-      // change mouse cursor when over marker
       this.myMap.on('pointermove', (e) => {
         const pixel = this.myMap.getEventPixel(e.originalEvent);
         const hit = this.myMap.hasFeatureAtPixel(pixel);
