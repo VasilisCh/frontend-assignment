@@ -6,6 +6,7 @@
   />
   <animation-controls
     @trackFetched="fetchedTrack = $store.state.track"
+    @trackReset="fetchedTrack = null"
     @speedValueChanged="setSpeed"
     @toggleAnimation="animationToggled = !animationToggled"
   />
