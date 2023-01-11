@@ -96,10 +96,11 @@ export default {
       this.$http.get(
         `https://services.marinetraffic.com/api${this.theRequest.replace('<apiKey>', 'cf8f05df0b57bfae43e762cc61fd381239c4c042')}`
       ).then((response) => {
+        console.log(response.data);
         this.resetError();
         this.$store.commit('setTrack', {
           track: response.data.map(function(l) {
-            return new Array(l[4], l[5]);
+            return new Array(l[4], l[5], l[8], l[9]);
           })
         });
         this.$emit('trackFetched');

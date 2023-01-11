@@ -9,7 +9,7 @@
 
 <script>
   import View from 'ol/View'
-  import Map from 'ol/Map'
+  import OlMap from 'ol/Map'
   import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer';
   import XYZ from 'ol/source/XYZ';
   import Cluster from 'ol/source/Cluster';
@@ -28,6 +28,10 @@
   import { LineString } from 'ol/geom';
   import {getVectorContext} from 'ol/render.js';
   import {boundingExtent} from 'ol/extent.js';
+  import Overlay from 'ol/Overlay.js';
+  import "bootstrap/dist/css/bootstrap.min.css";
+  import "bootstrap/dist/js/bootstrap.min.js";
+  import { Popover } from 'bootstrap/dist/js/bootstrap.esm.min.js'
 
   const key = '4q1O73skryrt6BnvYvzR';
   const attributions =
@@ -79,7 +83,9 @@
         else this.stopAnimation();
       },
       track: function(newVal) {
-        const locations = newVal;
+        const locations = newVal.map(function(l) {
+          return new Array(l[0], l[1]);
+        });
         route = new LineString(locations)
           .transform('EPSG:4326', 'EPSG:3857');
 
@@ -96,12 +102,20 @@
         });
         var startMarker = new Feature({
           type: 'icon',
-          geometry: new Point(routeCoords[0])
+          geometry: new Point(routeCoords[0]),
+          latitude: (newVal[0])[0],
+          longitude: (newVal[0])[1],
+          timestamp: (newVal[0])[2],
+          shipid: (newVal[0])[3],
         });
         position = startMarker.getGeometry().clone();
         var endMarker = new Feature({
           type: 'icon',
-          geometry: new Point(routeCoords[routeLength - 1])
+          geometry: new Point(routeCoords[routeLength - 1]),
+          latitude: (newVal[routeLength - 1])[0],
+          longitude: (newVal[routeLength - 1])[1],
+          timestamp: (newVal[routeLength - 1])[2],
+          shipid: (newVal[routeLength - 1])[3],
         });
         var vectorSource = new VectorSource({
             features: [routeFeature, geoMarker, startMarker, endMarker]
@@ -113,7 +127,7 @@
       }
     },
     mounted() {
-      this.myMap = new Map({
+      this.myMap = new OlMap({
         target: this.$refs['map-root'],
         layers: [
           new TileLayer({
@@ -130,19 +144,45 @@
           constrainResolution: true
         }),
       });
+      this.myMap.on('pointermove', (e) => {
+        const pixel = this.myMap.getEventPixel(e.originalEvent);
+        const hit = this.myMap.hasFeatureAtPixel(pixel);
+        this.myMap.getTarget().style.cursor = hit ? 'pointer' : '';
+      });
+
+      const element = document.getElementById('popup');
+      const popup = new Overlay({
+        element: element,
+        positioning: 'bottom-center',
+        stopEvent: false,
+      });
+      this.myMap.addOverlay(popup);
+
+      let popover;
+      function disposePopover() {
+        if (popover) {
+          popover.dispose();
+          popover = undefined;
+        }
+      }
       this.$http.get(
         `https://services.marinetraffic.com/api/exportvesseltrack/cf8f05df0b57bfae43e762cc61fd381239c4c042?v=1&msgtype=simple&protocol=json&MAXLAT=37.98&MINLON=23.60&MAXLON=23.70&days=1&MINLAT=37.90`
       ).then((response) => {
-        const vesselLocations = response.data.map(function(l) {
+        const uniqueData = [...new Map(response.data.map((m) => [m[8], m])).values()];
+        const vesselLocations = uniqueData.map(function(l) {
           return new Array(Number(l[3]), Number(l[4]));
         });
         const transformedLocations = new LineString(vesselLocations)
           .transform('EPSG:4326', 'EPSG:3857');
         const allRouteCoords = transformedLocations.getCoordinates();
 
-        const features = allRouteCoords.map(function(l) {
+        const features = allRouteCoords.map(function(l, index) {
           return new Feature({
-            geometry: new Point(l)
+            geometry: new Point(l),
+            latitude: (response.data[index])[3],
+            longitude: (response.data[index])[4],
+            timestamp: (response.data[index])[7],
+            shipid: (response.data[index])[8],
           });
         });
         var vectorSource = new VectorSource({
@@ -180,26 +220,60 @@
           },
         });
         this.myMap.addLayer(clusters);
-        this.myMap.on('click', (e) => {
-          clusters.getFeatures(e.pixel).then((clickedFeatures) => {
-            if (clickedFeatures.length) {
-              const features = clickedFeatures[0].get('features');
-              if (features.length > 1) {
-                const extent = boundingExtent(
-                  features.map((r) => r.getGeometry().getCoordinates())
-                );
-                this.myMap.getView().fit(extent, {duration: 1000, padding: [50, 50, 50, 50]});
-              }
-            }
+        this.myMap.on('click', (evt) => {
+          const feature = this.myMap.forEachFeatureAtPixel(evt.pixel, function (feature) {
+            return feature;
           });
+          disposePopover();
+          if (!feature) {
+            return;
+          }
+          console.log(feature)
+          if (feature.values_.features?.length > 1) {
+            clusters.getFeatures(evt.pixel).then((clickedFeatures) => {
+              if (clickedFeatures.length) {
+                const features = clickedFeatures[0].get('features');
+                if (features.length > 1) {
+                  const extent = boundingExtent(
+                    features.map((r) => r.getGeometry().getCoordinates())
+                  );
+                  this.myMap.getView().fit(extent, {duration: 1000, padding: [50, 50, 50, 50]});
+                }
+              }
+            });
+          } else {
+            popup.setPosition(evt.coordinate);
+            popover = new Popover(element, {
+              placement: 'top',
+              html: true,
+              content: `
+                <b>latitude:</b> ${
+                  feature.values_.features ?
+                  feature.values_.features[0].values_.latitude :
+                  feature.values_.latitude
+                }<br>
+                <b>longitude:</b> ${
+                  feature.values_.features ?
+                  feature.values_.features[0].values_.longitude :
+                  feature.values_.longitude
+                }<br>
+                <b>timestamp:</b> ${
+                  feature.values_.features ?
+                  feature.values_.features[0].values_.timestamp :
+                  feature.values_.timestamp
+                }<br>
+                <b>shipid:</b> ${
+                  feature.values_.features ?
+                  feature.values_.features[0].values_.shipid :
+                  feature.values_.shipid
+                }
+              `
+            });
+            popover.show();
+          }
         });
       }).catch((error)=>{
         console.error(error);
-      });
-      this.myMap.on('pointermove', (e) => {
-        const pixel = this.myMap.getEventPixel(e.originalEvent);
-        const hit = this.myMap.hasFeatureAtPixel(pixel);
-        this.myMap.getTarget().style.cursor = hit ? 'pointer' : '';
       });
     },
     methods: {
